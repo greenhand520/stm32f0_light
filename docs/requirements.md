@@ -282,6 +282,30 @@ stateDiagram-v2
 | D1 灯色优先级 | **层叠优先级**：低电闪烁 > 过热紫 > 模式指示（FUN 单击后 2 s）> 电池色基础层 |
 | D2 低电阈值 | **< 2.7 V 触发闪烁，≥ 3.1 V 解除**（迟滞） |
 
+## 12. 实现记录（2026-10-13，S5 勘误）
+
+**状态**：S1–S5 完成（commit：`6997ad2` 逻辑基础 / `ddc5be1` 状态机 / `852c253` BSP / `1aadbe6` 主循环+RTT）。`cargo test -p light-logic` 38 项全绿；三配置构建通过。
+
+**实测体积**（arm-none-eabi-size）：
+
+| 配置 | Flash | RAM (.data+.bss) |
+|---|---|---|
+| release（含 RTT） | 12 884 B | 1 096 B |
+| release（`--no-default-features`） | 6 244 B | 8 B |
+| dev | 13 000 B | 1 096 B |
+
+**实现期细化（行为与本文档一致）**：
+
+1. 渐变插值为 i32 向零截断线性（例：5→0 渐变 500 ms 处输出 3）；
+2. 低电渐灭期间电压 ≥ 3.1 V（D2 解除阈值）会撤销睡眠并渐变回当前模式亮度（FR-11.3"直至睡眠或解除"）；
+3. 电量档边界：2.7 V 恰值归 Red，仅 `< 2.7 V` 触发低电流程（D2 措辞优先）；
+4. 日志中电压以整数 mV 输出（no_std 浮点格式化会多占 ~11 KB Flash）；
+5. RTT 使用 `rtt_init_print!` 默认 1 KB 缓冲（RAM 占用已计入上表）；
+6. 构建细节：`-Tlink.x` 经 `firmware/.cargo/config.toml` 注入；`cargo test` 必须在 workspace 根目录执行（firmware 目录下目标被固定为 thumbv6m）；dev profile 启用 `opt-level="s"`+LTO（16 KB Flash 装不下未优化代码）；
+7. SysTick 节拍计数用 load/store（Cortex-M0 无 CAS，ISR 单写者安全）。
+
+**遗留**：PA10 全程 PFM（保持 C 现状，设计文档 §3.4）；实机冒烟待硬件/探针就绪（清单：`docs/design.md` §6.3）。
+
 ## 附录 A：原仓库已有的 Rust 原型（参考，不作为需求基准）
 
 原项目内存在一份已完成的 Rust 原型（`stm32f0_light/stm32f0_light/`，1720 行，进度账本 12 项全部完成），在 C 行为之外**额外增加**了：
