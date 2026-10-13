@@ -1,0 +1,15 @@
+[package]
+name = "stm32f0_light"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "stm32f0_light"
+path = "src/lib.rs"
+
+[dependencies]
+cortex-m = "0.7"
+cortex-m-rt = "0.7"
+embedded-hal = "0.2"
+stm32f0xx-hal = { version = "0.18", features = ["rt", "stm32f030x4"] }
+light-logic = { path = "../logic" }
