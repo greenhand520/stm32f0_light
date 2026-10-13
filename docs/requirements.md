@@ -301,7 +301,7 @@ stateDiagram-v2
 3. 电量档边界：2.7 V 恰值归 Red，仅 `< 2.7 V` 触发低电流程（D2 措辞优先）；
 4. 日志中电压以整数 mV 输出（no_std 浮点格式化会多占 ~11 KB Flash）；
 5. RTT 使用 `rtt_init_print!` 默认 1 KB 缓冲（RAM 占用已计入上表）；
-6. 构建细节：`-Tlink.x` 经 `firmware/.cargo/config.toml` 注入；`cargo test` 必须在 workspace 根目录执行（firmware 目录下目标被固定为 thumbv6m）；dev profile 启用 `opt-level="s"`+LTO（16 KB Flash 装不下未优化代码）；
+6. 构建细节：`-Tlink.x` 经 `stm32f0_light/.cargo/config.toml` 注入；`cargo test` 必须在 workspace 根目录执行（`stm32f0_light` 目录下目标被固定为 thumbv6m）；dev profile 启用 `opt-level="s"`+LTO（16 KB Flash 装不下未优化代码）；
 7. SysTick 节拍计数用 load/store（Cortex-M0 无 CAS，ISR 单写者安全）。
 
 **遗留**：PA10 全程 PFM（保持 C 现状，设计文档 §3.4）；实机冒烟待硬件/探针就绪（清单：`docs/design.md` §6.3）。

@@ -10,13 +10,13 @@
 
 ```mermaid
 graph TD
-    subgraph firmware["firmware（bin，thumbv6m-none-eabi）"]
+    subgraph fw["stm32f0_light（bin，thumbv6m-none-eabi）"]
         MAIN[main.rs 主循环<br/>10ms tick 驱动]
         HAL[hal.rs 时钟/外设初始化]
         BP[pwm]  BK[key]  BA[adc]  BL[led]  BF[flash]  BW[power]
         RTT[rtt 日志 feature rtt]
     end
-    subgraph logic["logic（lib，no_std，主机可测）"]
+    subgraph lg["light-logic（lib，no_std，主机可测）"]
         K[key.rs 按键 FSM]
         P[pwm.rs 占空比/钳位]
         S[sensor.rs 换算/阈值]
@@ -33,11 +33,11 @@ graph TD
     BF --> C
 ```
 
-- Cargo workspace：`software/stm32f0_light/{logic, firmware}`（`logic` = crate `light-logic`；`firmware` = crate `stm32f0_light`）。
+- Cargo workspace：`software/stm32f0_light/{light-logic, stm32f0_light}`（目录名与 crate 名一致：`light-logic` 逻辑库；`stm32f0_light` 固件 bin）。
 - 依赖（与原型一致，已验证可编译）：`cortex-m 0.7`、`cortex-m-rt 0.7`、`embedded-hal 0.2`、`stm32f0xx-hal 0.18`（`rt`, `stm32f030x4`）、`panic-halt`、`rtt-target 0.4`（feature `rtt`）。
-- 硬件访问只发生在 `firmware/src/bsp/`；`logic` 不含寄存器操作，可在 x86 主机跑 `cargo test`。
+- 硬件访问只发生在 `stm32f0_light/src/bsp/`；`light-logic` 不含寄存器操作，可在 x86 主机跑 `cargo test`。
 
-## 2. `logic` 模块设计
+## 2. `light-logic` 模块设计
 
 ### 2.1 key.rs — 按键状态机
 
@@ -147,7 +147,7 @@ pub struct Output {
 
 **睡眠路径**：FUN 长按关机（`UserPowerOff`）/ 夜灯超时 / 低电，统一为：渐灭（低电路径闪烁结束后同样渐灭）→ `Output.sleep = Some(..)`。
 
-## 3. `firmware` 模块设计
+## 3. `stm32f0_light`（固件）模块设计
 
 ### 3.1 hal.rs — 时钟与外设初始化
 
@@ -159,11 +159,11 @@ pub struct Output {
 
 | 模块 | 职责 | 要点 |
 |---|---|---|
-| `bsp/pwm.rs` | 暖 TIM14_CH1(PA7)/冷 TIM1_CH2(PA9) 10 kHz PWM | duty 由 `logic::pwm` 计算；`off()` |
+| `bsp/pwm.rs` | 暖 TIM14_CH1(PA7)/冷 TIM1_CH2(PA9) 10 kHz PWM | duty 由 `light_logic::pwm` 计算；`off()` |
 | `bsp/key.rs` | PA4/5/6 上拉输入 + 3×`KeyFsm` | `scan()` 读引脚喂 FSM；`take_events() -> (KeyEvent×3)` |
-| `bsp/adc.rs` | CH1/CH2/CH3 各 8 样本均值 | 换算调 `logic::sensor`；采样时间尽量设 239.5 周期（C 等效） |
+| `bsp/adc.rs` | CH1/CH2/CH3 各 8 样本均值 | 换算调 `light_logic::sensor`；采样时间尽量设 239.5 周期（C 等效） |
 | `bsp/led.rs` | PB1/PF0/PF1 低有效 | `set(RgbColor)` |
-| `bsp/flash.rs` | 0x08003C00 页擦写 | 半字编程（F0 要求）；编解码走 `logic::settings`；读改写保留另一组 |
+| `bsp/flash.rs` | 0x08003C00 页擦写 | 半字编程（F0 要求）；编解码走 `light_logic::settings`；读改写保留另一组 |
 | `bsp/power.rs` | `pre_setup()` / `enter_standby()` | 修正原型错误：PWR 时钟在 **APBENR** bit28；SB/WUF 清除、EWUP1 管理（FR-1.1） |
 
 ### 3.3 main.rs — 主循环
@@ -200,9 +200,9 @@ loop {
 
 ## 5. 资源与构建
 
-- `firmware/Cargo.toml`：`opt-level = "s"`、`lto = true`、`codegen-units = 1`、`panic = "abort"`（经 panic-halt）。
+- `stm32f0_light/Cargo.toml`：`opt-level = "s"`、`lto = true`、`codegen-units = 1`、`panic = "abort"`（经 panic-halt）。
 - `memory.x`：FLASH 16K @0x08000000、RAM 4K @0x20000000；`build.rs` 拷贝 `memory.x`。
-- `firmware/.cargo/config.toml`：`target = "thumbv6m-none-eabi"`。
+- `stm32f0_light/.cargo/config.toml`：`target = "thumbv6m-none-eabi"`。
 - 验收硬指标：固件 ≤ 16 KB Flash、静态 RAM ≤ 4 KB（`arm-none-eabi-size` 度量）。
 
 ## 6. 测试设计
@@ -240,9 +240,9 @@ loop {
 | 阶段 | 内容 | 验证 |
 |---|---|---|
 | S1 | workspace + `logic`：key / pwm / settings / sensor + 单测 | `cargo test -p light-logic` |
-| S2 | `logic`：fade / app 状态机与保护逻辑 + 单测 | 同上，覆盖 §6.1 app 行 |
-| S3 | `firmware`：hal + bsp（pwm/key/adc/led/flash/power） | thumbv6m 编译通过 |
-| S4 | `firmware`：main 集成 + RTT 日志 | 编译 + 体积达标 + no-rtt 可编译 |
+| S2 | `light-logic`：fade / app 状态机与保护逻辑 + 单测 | 同上，覆盖 §6.1 app 行 |
+| S3 | `stm32f0_light`：hal + bsp（pwm/key/adc/led/flash/power） | thumbv6m 编译通过 |
+| S4 | `stm32f0_light`：main 集成 + RTT 日志 | 编译 + 体积达标 + no-rtt 可编译 |
 | S5 | 验证与收尾：冒烟（如硬件在位）、README、需求文档勘误 | §6.2/6.3 |
 
 ## 8. 风险与取舍
@@ -250,7 +250,7 @@ loop {
 | 风险 | 处置 |
 |---|---|
 | `stm32f0xx-hal 0.18` API 与细节（ADC 采样时间等） | 沿用原型已编译代码；采样时间不支持 239.5 时用库默认并在冒烟中校验读数 |
-| PA7/PA9 冷暖映射与实物不符（Q7） | 按决议 PA7=暖；常量集中在 `logic::pwm` 一处，实机反了改一行 |
+| PA7/PA9 冷暖映射与实物不符（Q7） | 按决议 PA7=暖；常量集中在 `light_logic::pwm` 一处，实机反了改一行 |
 | PA10 恒 PFM（C 现状） | 保持现状；冒烟确认纹波/亮度无异常 |
 | 16 KB Flash 余量 | `opt-level="s"`+LTO；RTT 可关；S4 出体积数据 |
 | 无硬件在位时冒烟无法执行 | 单测+编译先行交付，冒烟清单随固件交付，硬件就绪后执行 |
