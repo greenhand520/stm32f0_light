@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["logic", "firmware"]
+members = ["light-logic", "stm32f0_light"]
 
 [profile.release]
 opt-level = "s"

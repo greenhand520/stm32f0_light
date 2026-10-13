@@ -10,8 +10,8 @@
 
 | 路径 | 内容 |
 |---|---|
-| `software/stm32f0_light/logic/` | `light-logic`：纯逻辑（状态机/按键/公式/编解码），主机可单测 |
-| `software/stm32f0_light/firmware/` | `stm32f0_light`：no_std 固件（HAL + BSP + 主循环 + RTT 日志） |
+| `software/stm32f0_light/light-logic/` | `light-logic`：纯逻辑（状态机/按键/公式/编解码），主机可单测 |
+| `software/stm32f0_light/stm32f0_light/` | `stm32f0_light`：no_std 固件（HAL + BSP + 主循环 + RTT 日志） |
 | `hardware/datasheet/` | 器件规格书（AS312 PIR、NTC 100K B3950） |
 | `docs/` | 需求/设计文档 |
 
@@ -23,8 +23,8 @@ cd software/stm32f0_light
 # 主机单元测试（必须在 workspace 根目录运行）
 cargo test -p light-logic
 
-# 固件构建（thumbv6m-none-eabi，firmware/.cargo/config.toml 已固定目标）
-cd firmware
+# 固件构建（thumbv6m-none-eabi，stm32f0_light/.cargo/config.toml 已固定目标）
+cd stm32f0_light
 cargo build                 # dev（已开尺寸优化 + LTO）
 cargo build --release       # 发布：Flash 12 884 B / RAM 1 096 B（含 RTT）
 cargo build --release --no-default-features   # 关闭 RTT：Flash 6 244 B / RAM 8 B

@@ -12,7 +12,7 @@ cortex-m = { version = "0.7", features = ["critical-section-single-core"] }
 cortex-m-rt = "0.7"
 embedded-hal = "0.2"
 stm32f0xx-hal = { version = "0.18", features = ["rt", "stm32f030x4"] }
-light-logic = { path = "../logic" }
+light-logic = { path = "../light-logic" }
 panic-halt = "0.2"
 rtt-target = { version = "0.4", optional = true }
 
