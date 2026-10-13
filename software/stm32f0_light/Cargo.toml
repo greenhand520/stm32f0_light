@@ -7,3 +7,10 @@ opt-level = "s"
 lto = true
 codegen-units = 1
 panic = "abort"
+
+# 16 KB Flash 装不下未优化代码，dev 同样开启尺寸优化与 LTO（保留调试信息）。
+[profile.dev]
+opt-level = "s"
+lto = true
+codegen-units = 1
+incremental = false
